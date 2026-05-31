@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>EventViz — LHE Event Visualizer</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <nav class="top-nav">
+        <div class="nav-brand">
+            <span class="brand-icon">&#9670;</span>
+            EventViz
+        </div>
+        <ul class="nav-links">
+            <li><a href="#" id="navHome" class="nav-link">Home</a></li>
+            <li><a href="#" id="navViewer" class="nav-link active">Viewer</a></li>
+        </ul>
+    </nav>
+
+    <main id="viewport" class="viewport">
+        <aside class="sidebar">
+            <div class="panel upload-panel">
+                <h3>LHE File</h3>
+                <div class="file-area">
+                    <input type="file" id="lheFileInput" accept=".lhe,.lhe.gz" hidden>
+                    <button class="upload-btn" id="uploadBtn">Upload .lhe file</button>
+                    <span id="fileName" class="file-name"></span>
+                    <div id="fileInfo" class="info-text">No file loaded.<br>Select a valid LHE file.</div>
+                    <div id="warningMsg" class="status warning"></div>
+                </div>
+            </div>
+
+            <div class="panel event-panel" id="eventControlPanel" hidden>
+                <h3>Event Navigator</h3>
+                <div class="event-nav">
+                    <label for="eventNumberInput">Event #</label>
+                    <input type="number" id="eventNumberInput" class="event-input" value="1" min="1" step="1">
+                    <div class="nav-buttons">
+                        <button id="prevEventBtn" class="nav-btn" title="Previous event">&larr;</button>
+                        <button id="nextEventBtn" class="nav-btn" title="Next event">&rarr;</button>
+                    </div>
+                </div>
+                <div id="eventStats" class="status">Select event to visualize</div>
+            </div>
+        </aside>
+
+        <div id="tooltip" class="tooltip-3d" hidden>
+            <div class="tooltip-header">
+                <span id="tooltipName" class="tooltip-name"></span>
+                <span id="tooltipPid" class="tooltip-pid"></span>
+            </div>
+            <div id="tooltipBody" class="tooltip-body"></div>
+        </div>
+    </main>
+
+    <div id="homeOverlay" class="home-overlay" hidden>
+        <div class="home-card">
+            <button id="closeHome" class="home-close" aria-label="Close">&times;</button>
+            <header class="home-header">
+                <h1>EventViz</h1>
+                <p class="home-tagline">Interactive 3D visualization of Les Houches Event files</p>
+            </header>
+            <section class="home-section">
+                <h2>What is EventViz?</h2>
+                <p>
+                    EventViz is a lightweight, browser-based tool for exploring particle-collision events
+                    stored in the Les Houches Event (LHE) format. It reads event metadata and per-particle
+                    kinematics directly from your file and renders an interactive three-dimensional view of
+                    the collision: incoming beams, hard-scatter products, and decay chains with correct
+                    angular separation.
+                </p>
+            </section>
+            <section class="home-section">
+                <h2>How it works</h2>
+                <ol class="home-steps">
+                    <li><strong>Upload</strong> an uncompressed <code>.lhe</code> file using the panel on the left.</li>
+                    <li><strong>Inspect</strong> generator, process, cross section, PDF, and beam information parsed from the file header.</li>
+                    <li><strong>Navigate</strong> events by number or with the arrow buttons — only the selected event is loaded for speed.</li>
+                    <li><strong>Explore</strong> the 3D view: orbit with the mouse, zoom, and hover over particle tracks for full kinematic details.</li>
+                </ol>
+                <p>
+                    Particle identities are resolved from PDG ID codes. Decay topology is reconstructed from
+                    mother–daughter indices in the event record, so decay products are drawn branching from
+                    their parent particle's endpoint.
+                </p>
+            </section>
+            <section class="home-section">
+                <h2>Roadmap</h2>
+                <p>
+                    Future releases will add support for <strong>HepMC</strong> file visualization, enabling
+                    exploration of fully showered and hadronized events alongside the current parton-level LHE view.
+                </p>
+            </section>
+            <footer class="home-footer">
+                <p>
+                    <strong>Author:</strong> A.M.M. Elsayed
+                    (<a href="mailto:ammelsayed@mail.ustc.edu.cn">ammelsayed@mail.ustc.edu.cn</a>)
+                </p>
+                <p class="home-credit">Developed with assistance from Claude (Anthropic).</p>
+            </footer>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
