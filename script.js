@@ -653,7 +653,7 @@ function setEventNumber(num) {
     loadEventByNumber(num);
 }
 
-async function handleFile(file) {
+async function handleFile(file, isBuiltIn = false) {
     $('warningMsg').textContent = '';
     $('fileName').textContent = file.name;
 
@@ -693,9 +693,106 @@ async function handleFile(file) {
     currentEventNumber = 1;
     $('eventNumberInput').value = 1;
     await loadEventByNumber(1);
+
+    if (!isBuiltIn) addUserLoadedSample(file);
 }
 
+// =============================================================================
+// Samples management
+// =============================================================================
+
+let builtInSamples = [];
+let userLoadedSamples = [];
+
+async function loadBuiltInSamples() {
+    try {
+        const response = await fetch('samples/samples.json');
+        if (!response.ok) throw new Error('Failed to load samples manifest');
+        builtInSamples = await response.json();
+    } catch (e) {
+        console.warn('Could not load built-in samples:', e.message);
+        builtInSamples = [];
+    }
+    if (builtInSamples.length > 0) {
+        renderSamplesList();
+        $('samplesPanel').hidden = false;
+    }
+}
+
+function renderSamplesList() {
+    const container = $('samplesList');
+    container.innerHTML = '';
+
+    const hasBuiltIn = builtInSamples.length > 0;
+    const hasUserLoaded = userLoadedSamples.length > 0;
+
+    if (!hasBuiltIn && !hasUserLoaded) {
+        $('samplesPanel').hidden = true;
+        return;
+    }
+
+    $('samplesPanel').hidden = false;
+
+    // Render built-in samples
+    for (const sample of builtInSamples) {
+        const item = document.createElement('div');
+        item.className = 'sample-item builtin';
+        item.innerHTML = `
+            <span>${sample.name}</span>
+            <span class="sample-badge">Built-in</span>
+        `;
+        item.addEventListener('click', () => loadSampleByPath(`samples/${sample.filename}`));
+        container.appendChild(item);
+    }
+
+    // Render user-loaded samples
+    for (const sample of userLoadedSamples) {
+        const item = document.createElement('div');
+        item.className = 'sample-item user-loaded';
+        item.innerHTML = `
+            <span>${sample.name}</span>
+            <span class="sample-badge">Loaded</span>
+        `;
+        item.addEventListener('click', () => loadSampleFromFile(sample));
+        container.appendChild(item);
+    }
+}
+
+async function loadSampleByPath(filePath) {
+    try {
+        const response = await fetch(filePath);
+        if (!response.ok) throw new Error('Failed to load sample file');
+        const blob = await response.blob();
+        const file = new File([blob], filePath.split('/').pop(), { type: 'text/plain' });
+        await handleFile(file, true);
+    } catch (e) {
+        $('fileInfo').innerHTML = `<span class="status error">Failed to load sample: ${e.message}</span>`;
+    }
+}
+
+async function loadSampleFromFile(sample) {
+    if (sample.fileObject) {
+        await handleFile(sample.fileObject);
+    }
+}
+
+function addUserLoadedSample(file) {
+    const sampleName = file.name.replace(/\.(lhe|lhe\.gz|gz)$/, '');
+    const existingIndex = userLoadedSamples.findIndex(s => s.name === sampleName);
+    
+    if (existingIndex !== -1) {
+        userLoadedSamples[existingIndex] = { name: sampleName, fileObject: file };
+    } else {
+        userLoadedSamples.push({ name: sampleName, fileObject: file });
+    }
+    
+    renderSamplesList();
+}
+
+// =============================================================================
 // Tooltip
+// =============================================================================
+
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const tooltip = $('tooltip');
@@ -809,3 +906,4 @@ $('eventNumberInput').addEventListener('keydown', e => {
 });
 
 initThree();
+loadBuiltInSamples();
