@@ -30,3 +30,6 @@ Note: Compressed `.lhe.gz` files are not supported in-browser; please gunzip bef
 - Labels & tooltips: CSS2DRenderer and KaTeX for readable LaTeX math rendering.
 - Parsing: Robust Fortran-style float parsing, streaming event index builder to avoid loading whole files.
 - Particle database: `script.js` contains a small PDG lookup to resolve names, LaTeX labels, charges and colors.
+
+## Contributions are Welcomed and much appretiated !
+
