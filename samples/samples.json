@@ -2,6 +2,19 @@
   {
     "name": "pp_ttbar_2L_LO",
     "filename": "pp_ttbar_2L_LO.lhe",
+    "type": "lhe",
+    "isBuiltIn": true
+  },
+  {
+    "name": "pp_ww_LO",
+    "filename": "pp_ww_LO.lhe",
+    "type": "lhe",
+    "isBuiltIn": true
+  },
+  {
+    "name": "pp_ww_LO (HepMC)",
+    "filename": "pp_ww_LO.hepmc",
+    "type": "hepmc",
     "isBuiltIn": true
   }
 ]
