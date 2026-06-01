@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>EventViz — LHE Event Visualizer</title>
+    <title>EventViz — LHE &amp; HepMC Event Visualizer</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -31,12 +31,12 @@
     <main id="viewport" class="viewport">
         <aside class="sidebar">
             <div class="panel upload-panel">
-                <h3>LHE File</h3>
+                <h3>Event File</h3>
                 <div class="file-area">
-                    <input type="file" id="lheFileInput" accept=".lhe,.lhe.gz" hidden>
-                    <button class="upload-btn" id="uploadBtn">Upload .lhe file</button>
+                    <input type="file" id="eventFileInput" accept=".lhe,.hepmc,.lhe.gz,.hepmc.gz" hidden>
+                    <button class="upload-btn" id="uploadBtn">Upload event file</button>
                     <span id="fileName" class="file-name"></span>
-                    <div id="fileInfo" class="info-text">No file loaded.<br>Select a valid LHE file.</div>
+                    <div id="fileInfo" class="info-text">No file loaded.<br>Select a valid LHE or HepMC file.</div>
                     <div id="warningMsg" class="status warning"></div>
                 </div>
             </div>
@@ -76,13 +76,13 @@
             <button id="closeHome" class="home-close" aria-label="Close">&times;</button>
             <header class="home-header">
                 <h1>EventViz</h1>
-                <p class="home-tagline">Interactive 3D visualization of Les Houches Event files</p>
+                <p class="home-tagline">Interactive 3D visualization of Les Houches Event and HepMC files</p>
             </header>
             <section class="home-section">
                 <h2>What is EventViz?</h2>
                 <p>
                     EventViz is a lightweight, browser-based tool for exploring particle-collision events
-                    stored in the Les Houches Event (LHE) format. It reads event metadata and per-particle
+                    stored in Les Houches Event (LHE) or HepMC format. It reads event metadata and per-particle
                     kinematics directly from your file and renders an interactive three-dimensional view of
                     the collision: incoming beams, hard-scatter products, and decay chains with correct
                     angular separation.
@@ -91,8 +91,8 @@
             <section class="home-section">
                 <h2>How it works</h2>
                 <ol class="home-steps">
-                    <li><strong>Upload</strong> an uncompressed <code>.lhe</code> file using the panel on the left.</li>
-                    <li><strong>Inspect</strong> generator, process, cross section, PDF, and beam information parsed from the file header.</li>
+                    <li><strong>Upload</strong> an uncompressed <code>.lhe</code> or <code>.hepmc</code> file using the panel on the left.</li>
+                    <li><strong>Inspect</strong> generator, process, cross section, PDF, tune parameters, and beam information parsed from the file.</li>
                     <li><strong>Navigate</strong> events by number or with the arrow buttons — only the selected event is loaded for speed.</li>
                     <li><strong>Explore</strong> the 3D view: orbit with the mouse, zoom, and hover over particle tracks for full kinematic details.</li>
                 </ol>
@@ -105,10 +105,8 @@
             <section class="home-section">
                 <h2>Roadmap</h2>
                 <p>
-                    Future releases will add support for <strong>HepMC</strong> file visualization, enabling
-                    exploration of fully showered and hadronized events alongside the current parton-level LHE view.
-                    We also plan to investigate the possibility of filling histograms of single-particle kinematics 
-                    (pT, η, φ, energy, and mass, if available) and multiparticle variables (ΔR, invariant mass, MET, HT, etc.) 
+                    Future releases may add histogramming of single-particle kinematics
+                    (pT, η, φ, energy, and mass, if available) and multiparticle variables (ΔR, invariant mass, MET, HT, etc.)
                     for the final state particles.
                 </p>
             </section>
@@ -122,6 +120,6 @@
         </div>
     </div>
 
-    <script type="module" src="script.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
