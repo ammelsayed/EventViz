@@ -36,7 +36,7 @@ function particleColor(pid) {
     if (pid === 25) return '#ffca28';
 
     if (abs === 2212) return anti ? '#e53935' : '#ef9a9a';
-    if (abs === 2112) return anti ? '#78909c';
+    if (abs === 2112) return anti ? '#78909c': '#cfd8dc';
     if (abs === 211) return anti ? '#7e57c2' : '#ba68c8';
     if (abs === 111) return '#ce93d8';
     if (abs === 321 || abs === 310 || abs === 130) return '#26a69a';
@@ -714,25 +714,30 @@ function showViewer() {
     $('navViewer').classList.add('active');
 }
 
-$('navHome').addEventListener('click', e => { e.preventDefault(); showHome(); });
-$('navViewer').addEventListener('click', e => { e.preventDefault(); showViewer(); });
-$('closeHome').addEventListener('click', showViewer);
-homeOverlay.addEventListener('click', e => { if (e.target === homeOverlay) showViewer(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') showViewer(); });
+function initUi() {
+    $('navHome').addEventListener('click', e => { e.preventDefault(); showHome(); });
+    $('navViewer').addEventListener('click', e => { e.preventDefault(); showViewer(); });
+    $('closeHome').addEventListener('click', showViewer);
+    homeOverlay.addEventListener('click', e => { if (e.target === homeOverlay) showViewer(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') showViewer(); });
 
-// UI bindings
-$('uploadBtn').addEventListener('click', () => $('eventFileInput').click());
-$('eventFileInput').addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (file) handleFile(file);
-    e.target.value = '';
-});
-$('prevEventBtn').addEventListener('click', () => setEventNumber(currentEventNumber - 1));
-$('nextEventBtn').addEventListener('click', () => setEventNumber(currentEventNumber + 1));
-$('eventNumberInput').addEventListener('change', e => setEventNumber(parseInt(e.target.value, 10)));
-$('eventNumberInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') setEventNumber(parseInt(e.target.value, 10));
-});
+    // UI bindings
+    $('uploadBtn').addEventListener('click', () => $('eventFileInput').click());
+    $('eventFileInput').addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) handleFile(file);
+        e.target.value = '';
+    });
+    $('prevEventBtn').addEventListener('click', () => setEventNumber(currentEventNumber - 1));
+    $('nextEventBtn').addEventListener('click', () => setEventNumber(currentEventNumber + 1));
+    $('eventNumberInput').addEventListener('change', e => setEventNumber(parseInt(e.target.value, 10)));
+    $('eventNumberInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') setEventNumber(parseInt(e.target.value, 10));
+    });
+}
 
-initThree();
-loadBuiltInSamples();
+window.addEventListener('DOMContentLoaded', () => {
+    initThree();
+    initUi();
+    loadBuiltInSamples();
+});
