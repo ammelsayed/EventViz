@@ -127,6 +127,37 @@ body {
     gap: 12px;
 }
 
+.progress-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.progress-label {
+    font-size: 0.78rem;
+    color: #94a3b8;
+}
+
+.progress-bar {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 8px;
+    height: 12px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-align: right;
+}
+
 .upload-btn {
     background: #3b82f6;
     border: none;
@@ -213,6 +244,66 @@ body {
 }
 
 .nav-btn:hover { background: #3b82f6; }
+
+/* View mode buttons */
+.view-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.view-btn {
+    background: #1e293b;
+    border: 1px solid #475569;
+    color: #cbd5e1;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1 1 auto;
+    text-align: center;
+}
+
+.view-btn:hover {
+    background: #334155;
+    border-color: #64748b;
+}
+
+.view-btn.active {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: #3b82f6;
+    color: #60a5fa;
+}
+
+.display-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
+.checkbox-label:hover {
+    color: #e2e8f0;
+}
 
 .status {
     font-size: 0.75rem;
