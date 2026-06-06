@@ -564,14 +564,14 @@ function addParticleTrack(group, start, dir, length, color, particle, info, line
         kinematicsDiv.appendChild(etaSpan);
         
         const kinematicsLabel = new CSS2DObject(kinematicsDiv);
-                    // Position labels so they don't cover the particle name
-                    if (currentView === 'transverse') {
-                        kinematicsLabel.position.copy(end.clone().add(new THREE.Vector3(-0.15, 0, 0)));
-                    } else if (currentView === 'longitudinal') {
-                        kinematicsLabel.position.copy(end.clone().add(new THREE.Vector3(0, 0.15, 0))); // above particle in y-z plane
-                    } else { // 3D view
-                        kinematicsLabel.position.copy(end.clone().add(new THREE.Vector3(-0.15, 0, 0)));
-                    }
+        // Position labels so they don't cover the particle name
+        if (currentView === 'transverse') {
+            kinematicsLabel.position.copy(end.clone().add(new THREE.Vector3(-0.15, 0, 0)));
+        } else if (currentView === 'longitudinal') {
+            kinematicsLabel.position.copy(end.clone().add(new THREE.Vector3(0, 0.15, 0))); // above particle in y-z plane
+        } else { // 3D view
+            kinematicsLabel.position.copy(end.clone().add(new THREE.Vector3(-0.15, 0, 0)));
+        }
         group.add(kinematicsLabel);
     }
 }
