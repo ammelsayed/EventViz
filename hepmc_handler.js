@@ -346,7 +346,7 @@ async function readHeader(file) {
     return text;
 }
 
-async function buildEventIndex(file) {
+async function buildEventIndex(file, onProgress) {
     const offsets = [];
     const CHUNK = 512 * 1024;
     let bytePos = 0;
@@ -368,6 +368,12 @@ async function buildEventIndex(file) {
 
         carry = text.slice(Math.max(0, text.length - 8));
         bytePos += CHUNK;
+        
+        // Update progress
+        if (onProgress) {
+            const progress = 5 + Math.min(90, (bytePos / file.size) * 85);
+            onProgress(progress, `Indexing events: ${eventStarts.length} found`);
+        }
     }
 
     if (eventStarts.length === 0) {
@@ -476,11 +482,14 @@ export function createHepmcHandler({ $, renderEvent, cleanupEventVisual, formatC
         return true;
     }
 
-    async function loadFile(file) {
+    async function loadFile(file, onProgress) {
         cleanupEventVisual();
         hasVisual = false;
 
+        if (onProgress) onProgress(10, 'Reading header...');
         const headerText = await readHeader(file);
+        
+        if (onProgress) onProgress(15, 'Validating file...');
         const validation = validateHepmcStructure(headerText);
         if (!validation.ok) {
             $('fileInfo').innerHTML = `<span class="status error">${validation.reason}</span>`;
@@ -496,9 +505,12 @@ export function createHepmcHandler({ $, renderEvent, cleanupEventVisual, formatC
             }
         }
 
-        eventOffsets = await buildEventIndex(file);
+        if (onProgress) onProgress(20, 'Indexing events...');
+        eventOffsets = await buildEventIndex(file, onProgress);
         totalEvents = eventOffsets.length;
         sourceFile = file;
+        
+        if (onProgress) onProgress(100, 'Complete!');
 
         if (totalEvents === 0) {
             $('fileInfo').innerHTML = '<span class="status error">No parseable HepMC events found.</span>';

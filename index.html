@@ -36,12 +36,19 @@
             <div class="panel upload-panel">
                 <h3>Event File</h3>
                 <div class="file-area">
-                    <input type="file" id="eventFileInput" accept=".lhe,.hepmc,.lhe.gz,.hepmc.gz" style="display:none;">
-                    <button class="upload-btn" id="uploadBtn">Upload event file</button>
-                    <span id="fileName" class="file-name"></span>
-                    <div id="fileInfo" class="info-text">No file loaded.<br>Select a valid LHE or HepMC file.</div>
-                    <div id="warningMsg" class="status warning"></div>
+                <input type="file" id="eventFileInput" accept=".lhe,.hepmc,.lhe.gz,.hepmc.gz" style="display:none;">
+                <button class="upload-btn" id="uploadBtn">Upload event file</button>
+                <span id="fileName" class="file-name"></span>
+                <div id="uploadProgress" class="progress-container" style="display:none;">
+                    <div id="progressLabel" class="progress-label">Loading file...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0%</div>
                 </div>
+                <div id="fileInfo" class="info-text">No file loaded.<br>Select a valid LHE or HepMC file.</div>
+                <div id="warningMsg" class="status warning"></div>
+            </div>
             </div>
 
             <div class="panel samples-panel" id="samplesPanel" hidden>
@@ -62,6 +69,29 @@
                     </div>
                 </div>
                 <div id="eventStats" class="status">Select event to visualize</div>
+                
+                <h3 style="margin-top: 1rem;">View Mode</h3>
+                <div class="view-buttons">
+                    <button class="view-btn active" id="view3dBtn" data-view="3d">3D View</button>
+                    <button class="view-btn" id="viewTransverseBtn" data-view="transverse">Transverse View</button>
+                    <button class="view-btn" id="viewLongitudinalBtn" data-view="longitudinal">Longitudinal View</button>
+                </div>
+                
+                <h3 style="margin-top: 1rem;">Display Options</h3>
+                <div class="display-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="showAxesCheckbox">
+                        <span>Show Axes</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="showKinematicsCheckbox">
+                        <span>Show Kinematics</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="showParticleCoordsCheckbox">
+                        <span>Show (p<sub>T</sub>, φ, η) Coordinates</span>
+                    </label>
+                </div>
             </div>
         </aside>
 

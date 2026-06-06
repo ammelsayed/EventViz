@@ -154,8 +154,13 @@ export function kinematicPhi(p) {
 
 let scene, camera, renderer, labelRenderer, controls, viewportEl;
 let currentEventGroup = null;
+let coordinateAxesGroup = null;
 let hitTargets = [];
 const _labelWorldPos = new THREE.Vector3();
+let currentView = '3d';
+let showAxes = false;
+let showKinematics = false;
+let showParticleCoords = false;
 
 const LABEL_REF_DIST = 10;
 const LABEL_BASE_PX = 11;
@@ -180,6 +185,121 @@ function viewportSize() {
     return { w: w || window.innerWidth, h: h || window.innerHeight };
 }
 
+function addAxisLabel(group, position, text, color, fontSize = '14px') {
+    const div = document.createElement('div');
+    div.style.color = color;
+    div.style.fontWeight = '500';
+    div.style.fontSize = fontSize;
+    div.style.opacity = '0.95';
+    div.style.textShadow = '0 0 6px rgba(0,0,0,1)';
+    div.textContent = text;
+    const label = new CSS2DObject(div);
+    label.position.copy(position);
+    group.add(label);
+}
+
+function buildCoordinateAxes() {
+    if (coordinateAxesGroup) {
+        scene.remove(coordinateAxesGroup);
+        coordinateAxesGroup.traverse(obj => {
+            if (obj.isCSS2DObject && obj.element?.parentNode) obj.element.remove();
+        });
+    }
+    
+    if (!showAxes) {
+        return;
+    }
+    
+    const axisLength = 6;
+    coordinateAxesGroup = new THREE.Group();
+    // Reset axes position to origin before shifting
+
+    if (currentView === '3d') {
+        // Z-axis (beam direction, blue)
+        const zMat = new THREE.LineBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.5 });
+        const zPoints = [new THREE.Vector3(0, 0, -axisLength), new THREE.Vector3(0, 0, axisLength)];
+        const zLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(zPoints), zMat);
+        coordinateAxesGroup.add(zLine);
+        
+        // X-axis (towards LHC ring center, red)
+        const xMat = new THREE.LineBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.5 });
+        const xPoints = [new THREE.Vector3(-axisLength, 0, 0), new THREE.Vector3(axisLength, 0, 0)];
+        const xLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(xPoints), xMat);
+        coordinateAxesGroup.add(xLine);
+        
+        // Y-axis (upwards, green)
+        const yMat = new THREE.LineBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.5 });
+        const yPoints = [new THREE.Vector3(0, -axisLength, 0), new THREE.Vector3(0, axisLength, 0)];
+        const yLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(yPoints), yMat);
+        coordinateAxesGroup.add(yLine);
+        
+        addAxisLabel(coordinateAxesGroup, new THREE.Vector3(axisLength + 0.6, 0, 0), '+x (towards LHC ring center)', '#ff4444');
+        addAxisLabel(coordinateAxesGroup, new THREE.Vector3(0, axisLength + 0.6, 0), '+y (up)', '#44ff44');
+        addAxisLabel(coordinateAxesGroup, new THREE.Vector3(0, 0, axisLength + 0.6), '+z (beam)', '#4488ff');
+        addAxisLabel(coordinateAxesGroup, new THREE.Vector3(0, 0, -axisLength - 0.6), '-z', '#4488ff');
+    } else if (currentView === 'transverse') {
+        // X-axis (red)
+        const xMat = new THREE.LineBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.6 });
+        const xPoints = [new THREE.Vector3(-axisLength, 0, 0), new THREE.Vector3(axisLength, 0, 0)];
+        const xLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(xPoints), xMat);
+        coordinateAxesGroup.add(xLine);
+        
+        // Y-axis (green)
+        const yMat = new THREE.LineBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.6 });
+        const yPoints = [new THREE.Vector3(0, -axisLength, 0), new THREE.Vector3(0, axisLength, 0)];
+        const yLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(yPoints), yMat);
+        coordinateAxesGroup.add(yLine);
+        
+        addAxisLabel(coordinateAxesGroup, new THREE.Vector3(axisLength + 0.6, 0, 0), '+x', '#ff4444');
+        addAxisLabel(coordinateAxesGroup, new THREE.Vector3(0, axisLength + 0.6, 0), '+y', '#44ff44');
+    } else if (currentView === 'longitudinal') {
+        // Z-axis (blue, beam)
+        const zMat = new THREE.LineBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.6 });
+        const zPoints = [new THREE.Vector3(0, 0, -axisLength), new THREE.Vector3(0, 0, axisLength)];
+        const zLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(zPoints), zMat);
+        coordinateAxesGroup.add(zLine);
+        
+        // Y-axis (green)
+        const yMat = new THREE.LineBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.6 });
+        const yPoints = [new THREE.Vector3(0, -axisLength, 0), new THREE.Vector3(0, axisLength, 0)];
+        const yLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints(yPoints), yMat);
+        coordinateAxesGroup.add(yLine);
+        
+        addAxisLabel(coordinateAxesGroup, new THREE.Vector3(0, axisLength + 0.6, 0), '+y (up)', '#44ff44');
+        addAxisLabel(coordinateAxesGroup, new THREE.Vector3(0, 0, axisLength + 0.6), '+z (beam)', '#4488ff');
+        addAxisLabel(coordinateAxesGroup, new THREE.Vector3(0, 0, -axisLength - 0.6), '-z', '#4488ff');
+    }
+    
+    scene.add(coordinateAxesGroup);
+}
+
+function setViewCamera(view) {
+    currentView = view;
+    const distance = 12;
+    
+    if (view === '3d') {
+        camera.position.set(6, 5, 9);
+        camera.up.set(0, 1, 0);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+    } else if (view === 'transverse') {
+        camera.position.set(0, 0, distance);
+        camera.up.set(0, 1, 0);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+    } else if (view === 'longitudinal') {
+        camera.position.set(-distance, 0, 0);  // Look along negative x-axis to get z-y plane
+        camera.up.set(0, 1, 0);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+    }
+    
+    buildCoordinateAxes();
+    if (activeHandler?.hasVisual()) {
+        loadEventByNumber(currentEventNumber);
+    }
+}
+
 export function initThree() {
     viewportEl = document.getElementById('viewport');
     scene = new THREE.Scene();
@@ -188,8 +308,6 @@ export function initThree() {
 
     const { w, h } = viewportSize();
     camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 500);
-    camera.position.set(6, 5, 9);
-    camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(w, h);
@@ -213,9 +331,7 @@ export function initThree() {
     fill.position.set(-4, 2, -3);
     scene.add(fill);
 
-    const grid = new THREE.GridHelper(24, 24, 0x334466, 0x1a2233);
-    grid.position.y = -1.5;
-    scene.add(grid);
+    setViewCamera('3d');
 
     window.addEventListener('resize', () => {
         const { w: rw, h: rh } = viewportSize();
@@ -251,6 +367,20 @@ export function cleanupEventVisual() {
     scene.remove(currentEventGroup);
     currentEventGroup = null;
     hitTargets = [];
+    
+    // Also clean up coordinate axes
+    if (coordinateAxesGroup) {
+        coordinateAxesGroup.traverse(obj => {
+            if (obj.isCSS2DObject && obj.element?.parentNode) obj.element.remove();
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                else obj.material.dispose();
+            }
+        });
+        scene.remove(coordinateAxesGroup);
+        coordinateAxesGroup = null;
+    }
 }
 
 function momentumDirection(p) {
@@ -336,11 +466,29 @@ function addIncomingBeam(group, start, dir, length, particle) {
     hitTargets.push(hit);
 }
 
-function addParticleTrack(group, start, dir, length, color, particle, info) {
+
+
+
+function deltaPhi(phi1, phi2) {
+    let dphi = phi1 - phi2;
+    while (dphi > Math.PI) dphi -= 2 * Math.PI;
+    while (dphi < -Math.PI) dphi += 2 * Math.PI;
+    return Math.abs(dphi);
+}
+
+
+
+function calculatePt(particle) {
+    return Math.hypot(particle.px, particle.py);
+}
+
+function calculatePhi(particle) {
+    return Math.atan2(particle.py, particle.px);
+}
+
+function addParticleTrack(group, start, dir, length, color, particle, info, lineRadius = 0.016, sphereRadius = 0.085, arrowLength = 0.15, arrowRadius = 0.04) {
     const col = hexColor(color);
     const end = start.clone().add(dir.clone().multiplyScalar(length));
-    const lineRadius = 0.016;
-    const sphereRadius = 0.085;
 
     const trackMat = new THREE.MeshStandardMaterial({
         color: col,
@@ -357,6 +505,14 @@ function addParticleTrack(group, start, dir, length, color, particle, info) {
     track.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
     group.add(track);
 
+    const arrow = new THREE.Mesh(
+        new THREE.ConeGeometry(arrowRadius, arrowLength, 12),
+        trackMat
+    );
+    arrow.position.copy(end.clone().sub(dir.clone().multiplyScalar(arrowLength * 0.5)));
+    arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    group.add(arrow);
+
     const sphereMat = new THREE.MeshStandardMaterial({
         color: col,
         emissive: col,
@@ -372,7 +528,207 @@ function addParticleTrack(group, start, dir, length, color, particle, info) {
     group.add(sphere);
     hitTargets.push(sphere);
 
+    // Keep particle name label on the sphere
     addSphereLabel(group, end, info.latex || info.name);
+    
+    if (showParticleCoords) {
+        // Add compact, stacked (pT, phi, eta) label with units, on the left
+        const pT = calculatePt(particle);
+        const phi = calculatePhi(particle);
+        const eta = kinematicEta(particle);
+        const kinematicsDiv = document.createElement('div');
+        kinematicsDiv.style.color = '#94a3b8';
+        kinematicsDiv.style.fontSize = '9px';
+        kinematicsDiv.style.fontFamily = 'Consolas, monospace';
+        kinematicsDiv.style.textShadow = '0 0 3px rgba(0,0,0,1)';
+        kinematicsDiv.style.background = 'rgba(5,11,26,0.9)';
+        kinematicsDiv.style.padding = '2px 4px';
+        kinematicsDiv.style.borderRadius = '3px';
+        kinematicsDiv.style.lineHeight = '1.2';
+        kinematicsDiv.style.display = 'flex';
+        kinematicsDiv.style.flexDirection = 'column';
+        kinematicsDiv.style.alignItems = 'flex-start';
+        
+        // Create stacked spans
+        const ptSpan = document.createElement('span');
+        ptSpan.textContent = `pT: ${pT.toFixed(2)} GeV`;
+        
+        const phiSpan = document.createElement('span');
+        phiSpan.textContent = `φ: ${phi.toFixed(3)}`;
+        
+        const etaSpan = document.createElement('span');
+        etaSpan.textContent = `η: ${eta.toFixed(3)}`;
+        
+        kinematicsDiv.appendChild(ptSpan);
+        kinematicsDiv.appendChild(phiSpan);
+        kinematicsDiv.appendChild(etaSpan);
+        
+        const kinematicsLabel = new CSS2DObject(kinematicsDiv);
+                    // Position labels so they don't cover the particle name
+                    if (currentView === 'transverse') {
+                        kinematicsLabel.position.copy(end.clone().add(new THREE.Vector3(-0.15, 0, 0)));
+                    } else if (currentView === 'longitudinal') {
+                        kinematicsLabel.position.copy(end.clone().add(new THREE.Vector3(0, 0.15, 0))); // above particle in y-z plane
+                    } else { // 3D view
+                        kinematicsLabel.position.copy(end.clone().add(new THREE.Vector3(-0.15, 0, 0)));
+                    }
+        group.add(kinematicsLabel);
+    }
+}
+
+function calculateTheta(particle) {
+    const pT = calculatePt(particle);
+    const pz = particle.pz;
+    return Math.atan2(pT, pz);
+}
+
+function calculateDeltaR(particle1, particle2) {
+    const dphi = deltaPhi(calculatePhi(particle1), calculatePhi(particle2));
+    const deta = kinematicEta(particle1) - kinematicEta(particle2);
+    return Math.sqrt(dphi * dphi + deta * deta);
+}
+
+function addDeltaArcs(group, daughterPairs, decayVertices, view, roots, origin) {
+    if (!showKinematics) return;
+
+    for (const { motherIdx, daughters } of daughterPairs) {
+        const vertex = decayVertices.get(motherIdx);
+        if (!vertex) continue;
+        
+        // Get all pairwise combinations of daughters
+        for (let i = 0; i < daughters.length; i++) {
+            for (let j = i + 1; j < daughters.length; j++) {
+                const d1 = daughters[i];
+                const d2 = daughters[j];
+                
+                let labelText;
+                
+                if (view === '3d') {
+                    // Calculate ΔR for 3D view
+                    const deltaR = calculateDeltaR(d1.p, d2.p);
+                    labelText = `ΔR = ${deltaR.toFixed(3)}`;
+                } else if (view === 'transverse') {
+                    // Calculate Δφ for transverse view
+                    const angle1 = Math.atan2(d1.p.py, d1.p.px);
+                    const angle2 = Math.atan2(d2.p.py, d2.p.px);
+                    const delta = deltaPhi(angle1, angle2);
+                    labelText = `Δφ = ${delta.toFixed(3)}`;
+                } else { // longitudinal
+                    // Calculate both Δη and Δθ for longitudinal view
+                    const eta1 = kinematicEta(d1.p);
+                    const eta2 = kinematicEta(d2.p);
+                    const deta = Math.abs(eta1 - eta2);
+                    const theta1 = calculateTheta(d1.p);
+                    const theta2 = calculateTheta(d2.p);
+                    let dtheta = Math.abs(theta1 - theta2);
+                    if (dtheta > Math.PI) dtheta = 2 * Math.PI - dtheta;
+                    labelText = `Δη = ${deta.toFixed(3)}\nΔθ = ${dtheta.toFixed(3)}`;
+                }
+                
+                // For 3D, let's just add a label at the vertex since drawing an arc in 3D is tricky
+                if (view === '3d') {
+                    const labelDiv = document.createElement('div');
+                    labelDiv.style.color = '#66d9e8';
+                    labelDiv.style.fontWeight = 'bold';
+                    labelDiv.style.fontSize = '12px';
+                    labelDiv.style.textShadow = '0 0 5px rgba(0,0,0,1)';
+                    labelDiv.style.background = 'rgba(5,11,26,0.8)';
+                    labelDiv.style.padding = '3px 6px';
+                    labelDiv.style.borderRadius = '4px';
+                    labelDiv.style.whiteSpace = 'pre-line'; // for newlines
+                    labelDiv.textContent = labelText;
+                    const label = new CSS2DObject(labelDiv);
+                    label.position.copy(vertex.clone().add(new THREE.Vector3(0, 0.2, 0)));
+                    group.add(label);
+                } else {
+                    let angle1, angle2;
+                    if (view === 'transverse') {
+                        angle1 = Math.atan2(d1.p.py, d1.p.px);
+                        angle2 = Math.atan2(d2.p.py, d2.p.px);
+                    } else {
+                        // For longitudinal view: angle based on z (beam) and y axes
+                        angle1 = Math.atan2(d1.p.py, d1.p.pz); // theta in y-z plane
+                        angle2 = Math.atan2(d2.p.py, d2.p.pz);
+                    }
+                    
+                    // Draw arc centered at decay vertex
+                    const arcRadius = 0.6; // Smaller for decay vertices
+                    const arcPoints = [];
+                    const steps = 40;
+                    
+                    let startAngle = Math.min(angle1, angle2);
+                    let endAngle = Math.max(angle1, angle2);
+                    if (endAngle - startAngle > Math.PI) {
+                        [startAngle, endAngle] = [endAngle, startAngle];
+                        startAngle -= 2 * Math.PI;
+                    }
+                    
+                    for (let s = 0; s <= steps; s++) {
+                        const t = startAngle + (endAngle - startAngle) * (s / steps);
+                        if (view === 'transverse') {
+                            arcPoints.push(
+                                new THREE.Vector3(
+                                    vertex.x + Math.cos(t) * arcRadius,
+                                    vertex.y + Math.sin(t) * arcRadius,
+                                    vertex.z
+                                )
+                            );
+                        } else {
+                            // Longitudinal: y-z plane
+                            arcPoints.push(
+                                new THREE.Vector3(
+                                    vertex.x,
+                                    vertex.y + Math.sin(t) * arcRadius,
+                                    vertex.z + Math.cos(t) * arcRadius
+                                )
+                            );
+                        }
+                    }
+                    
+                    const arcMat = new THREE.LineBasicMaterial({
+                        color: 0x66d9e8,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const arcGeo = new THREE.BufferGeometry().setFromPoints(arcPoints);
+                    const arc = new THREE.Line(arcGeo, arcMat);
+                    group.add(arc);
+                    
+                    // Add label
+                    const midAngle = (startAngle + endAngle) / 2;
+                    const labelOffset = arcRadius + 0.2;
+                    let labelPos;
+                    if (view === 'transverse') {
+                        labelPos = new THREE.Vector3(
+                            vertex.x + Math.cos(midAngle) * labelOffset,
+                            vertex.y + Math.sin(midAngle) * labelOffset,
+                            vertex.z
+                        );
+                    } else {
+                        labelPos = new THREE.Vector3(
+                            vertex.x,
+                            vertex.y + Math.sin(midAngle) * labelOffset,
+                            vertex.z + Math.cos(midAngle) * labelOffset
+                        );
+                    }
+                    
+                    const dLabelDiv = document.createElement('div');
+                    dLabelDiv.style.color = '#66d9e8';
+                    dLabelDiv.style.fontWeight = 'bold';
+                    dLabelDiv.style.fontSize = '12px';
+                    dLabelDiv.style.textShadow = '0 0 5px rgba(0,0,0,1)';
+                    dLabelDiv.style.background = 'rgba(5,11,26,0.8)';
+                    dLabelDiv.style.padding = '3px 6px';
+                    dLabelDiv.style.borderRadius = '4px';
+                    dLabelDiv.style.whiteSpace = 'pre-line';
+                    dLabelDiv.textContent = labelText;
+                    const dLabel = new CSS2DObject(dLabelDiv);
+                    dLabel.position.copy(labelPos);
+                    group.add(dLabel);
+                }
+            }
+        }
+    }
 }
 
 export function renderEvent(particles) {
@@ -383,46 +739,266 @@ export function renderEvent(particles) {
     const origin = new THREE.Vector3(0, 0, 0);
     const childrenMap = buildChildrenMap(particles);
     const maxP = Math.max(...particles.map(p => Math.hypot(p.px, p.py, p.pz)), 1e-6);
+    const maxPt = Math.max(...particles.map(p => Math.hypot(p.px, p.py)), 1e-6);
 
     const drawn = new Set();
-
-    particles.forEach((p, i) => {
-        if (!isIncoming(p)) return;
-        const beamZ = p.pz >= 0 ? -3.4 : 3.4;
-        const start = new THREE.Vector3(0, 0, beamZ);
-        const dir = origin.clone().sub(start).normalize();
-        const len = start.distanceTo(origin);
-        addIncomingBeam(group, start, dir, len, p);
-    });
-
-    function drawBranch(particleIdx, startPos) {
-        if (drawn.has(particleIdx)) return;
-        const p = particles[particleIdx - 1];
-        if (!p || isIncoming(p)) return;
-        drawn.add(particleIdx);
-
-        const dir = momentumDirection(p);
-        const len = arrowLength(p, maxP);
-        const info = getParticleInfo(p.idup);
-        const end = startPos.clone().add(dir.clone().multiplyScalar(len));
-
-        addParticleTrack(group, startPos, dir, len, info.color, p, info);
-
-        const childList = childrenMap.get(particleIdx) || [];
-        for (const childIdx of childList) {
-            if (isIncoming(particles[childIdx - 1])) continue;
-            drawBranch(childIdx, end);
-        }
+    const finalStateParticles = [];
+    const roots = findRootIndices(particles);
+    
+    // Track decay vertices and direct daughters
+    const decayVertices = new Map(); // key: particleIdx, value: position
+    const daughterPairs = []; // Array of { motherIdx, daughters: [{ p, info, endPos }] }
+    const allParticlePositions = []; // Collect all particle sphere positions for centering
+    
+    // Add initial collision particles as a daughter pair with mother at origin
+    if (roots.length >= 2) {
+        const initialDaughters = roots.map(idx => ({
+            p: particles[idx - 1],
+            info: getParticleInfo(particles[idx - 1].idup)
+        }));
+        daughterPairs.push({ motherIdx: 0, daughters: initialDaughters });
+        decayVertices.set(0, origin.clone());
     }
 
-    const roots = findRootIndices(particles);
-    for (const rootIdx of roots) drawBranch(rootIdx, origin);
+    if (currentView === '3d') {
+        particles.forEach((p, i) => {
+            if (!isIncoming(p)) return;
+            const beamZ = p.pz >= 0 ? -3.4 : 3.4;
+            const start = new THREE.Vector3(0, 0, beamZ);
+            const dir = origin.clone().sub(start).normalize();
+            const len = start.distanceTo(origin);
+            addIncomingBeam(group, start, dir, len, p);
+        });
 
-    particles.forEach((p, i) => {
-        const idx = i + 1;
-        if (isIncoming(p) || drawn.has(idx)) return;
-        drawBranch(idx, origin);
-    });
+        function drawBranch(particleIdx, startPos) {
+            if (drawn.has(particleIdx)) return;
+            const p = particles[particleIdx - 1];
+            if (!p || isIncoming(p)) return;
+            drawn.add(particleIdx);
+
+            const dir = momentumDirection(p);
+            const len = arrowLength(p, maxP);
+            const info = getParticleInfo(p.idup);
+            const end = startPos.clone().add(dir.clone().multiplyScalar(len));
+
+            addParticleTrack(group, startPos, dir, len, info.color, p, info);
+
+            // Collect particle position for centering
+            allParticlePositions.push(end.clone());
+            
+            const childList = childrenMap.get(particleIdx) || [];
+            const hasOutgoingDaughters = childList.some(idx => !isIncoming(particles[idx - 1]));
+            
+            // Track decay vertex and daughters
+            if (hasOutgoingDaughters && childList.length >= 2) {
+                const daughters = [];
+                decayVertices.set(particleIdx, end.clone());
+                for (const childIdx of childList) {
+                    if (isIncoming(particles[childIdx - 1])) continue;
+                    daughters.push({ 
+                        p: particles[childIdx - 1], 
+                        info: getParticleInfo(particles[childIdx - 1].idup) 
+                    });
+                }
+                if (daughters.length >= 2) {
+                    daughterPairs.push({ motherIdx: particleIdx, daughters });
+                }
+            }
+            
+            if (!hasOutgoingDaughters) {
+                finalStateParticles.push({ p, info, idx: particleIdx });
+            }
+
+            for (const childIdx of childList) {
+                if (isIncoming(particles[childIdx - 1])) continue;
+                drawBranch(childIdx, end);
+            }
+        }
+
+        for (const rootIdx of roots) drawBranch(rootIdx, origin);
+
+        particles.forEach((p, i) => {
+            const idx = i + 1;
+            if (isIncoming(p) || drawn.has(idx)) return;
+            drawBranch(idx, origin);
+        });
+        
+        // Add delta R labels for 3D view
+        addDeltaArcs(group, daughterPairs, decayVertices, currentView, roots, origin);
+    } else {
+        const finalProjs = [];
+
+        function draw2DBranch(particleIdx, startPos) {
+            if (drawn.has(particleIdx)) return;
+            const p = particles[particleIdx - 1];
+            if (!p || isIncoming(p)) return;
+            drawn.add(particleIdx);
+
+            const info = getParticleInfo(p.idup);
+            let px, py, pz;
+            let lengthScale;
+            let endPosition;
+            const scaleFactor = 0.25; // Even shorter arrows
+            
+            if (currentView === 'transverse') {
+                px = p.px;
+                py = p.py;
+                pz = 0;
+                const pt = Math.hypot(px, py);
+                lengthScale = scaleFactor + (pt / maxPt) * 1.0;
+                const dir = new THREE.Vector3(px, py, 0).normalize();
+                endPosition = startPos.clone().add(dir.clone().multiplyScalar(lengthScale));
+            } else { // longitudinal
+                px = 0;
+                py = p.py;
+                pz = p.pz;
+                const pl = Math.hypot(py, pz);
+                lengthScale = scaleFactor + (pl / maxPt) * 1.0;
+                const dir = new THREE.Vector3(0, py, pz).normalize();
+                endPosition = startPos.clone().add(dir.clone().multiplyScalar(lengthScale));
+            }
+            
+            // Now draw the particle track with thick cylinder, arrow, sphere, and tooltip!
+            const dirVec = new THREE.Vector3(px, py, pz).normalize();
+            addParticleTrack(group, startPos, dirVec, lengthScale, info.color, p, info, 
+                0.03, // Thicker line
+                0.12, // Thicker sphere
+                0.18, // Longer arrow
+                0.06  // Thicker arrow
+            );
+            
+            // Collect particle position for centering
+            allParticlePositions.push(endPosition.clone());
+            
+            const childList = childrenMap.get(particleIdx) || [];
+            const hasOutgoingDaughters = childList.some(idx => !isIncoming(particles[idx - 1]));
+            
+            // Track decay vertex and daughters
+            if (hasOutgoingDaughters && childList.length >= 2) {
+                const daughters = [];
+                decayVertices.set(particleIdx, endPosition.clone());
+                for (const childIdx of childList) {
+                    if (isIncoming(particles[childIdx - 1])) continue;
+                    daughters.push({ 
+                        p: particles[childIdx - 1], 
+                        info: getParticleInfo(particles[childIdx - 1].idup) 
+                    });
+                }
+                if (daughters.length >= 2) {
+                    daughterPairs.push({ motherIdx: particleIdx, daughters });
+                }
+            }
+            
+            if (!hasOutgoingDaughters) {
+                finalStateParticles.push({ p, info, idx: particleIdx });
+                finalProjs.push({ p, info, idx: particleIdx, px, py, endPos: endPosition });
+            }
+            
+            for (const childIdx of childList) {
+                if (isIncoming(particles[childIdx - 1])) continue;
+                draw2DBranch(childIdx, endPosition);
+            }
+        }
+
+        for (const rootIdx of roots) draw2DBranch(rootIdx, origin);
+
+        particles.forEach((p, i) => {
+            const idx = i + 1;
+            if (isIncoming(p) || drawn.has(idx)) return;
+            draw2DBranch(idx, origin);
+        });
+
+        // Add MET only in transverse view
+        if (currentView === 'transverse') {
+            let metX = 0, metY = 0;
+            finalStateParticles.forEach(({ p }) => {
+                metX -= p.px;
+                metY -= p.py;
+            });
+            
+            const met = Math.hypot(metX, metY);
+            
+            if (met > 1e-3) {
+                const metVec = new THREE.Vector3(metX, metY, 0);
+                const metDir = metVec.clone().normalize();
+                const metLen = 0.3 + (met / maxPt) * 1.2;
+                const metEnd = origin.clone().add(metDir.clone().multiplyScalar(metLen));
+                
+                // Draw MET track with dashed line
+                const metGeo = new THREE.CylinderGeometry(0.03, 0.03, metLen, 12);
+                const metMat = new THREE.MeshStandardMaterial({
+                    color: 0xff6b6b,
+                    emissive: 0xff6b6b,
+                    emissiveIntensity: 0.3,
+                    metalness: 0.12,
+                    roughness: 0.5
+                });
+                const metTrack = new THREE.Mesh(metGeo, metMat);
+                metTrack.position.copy(origin.clone().add(metDir.clone().multiplyScalar(metLen / 2)));
+                metTrack.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), metDir);
+                group.add(metTrack);
+                
+                // Dashed line to indicate MET
+                const dashedMat = new THREE.LineDashedMaterial({
+                    color: 0xff6b6b,
+                    dashSize: 0.1,
+                    gapSize: 0.1,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const dashedGeo = new THREE.BufferGeometry().setFromPoints([origin, metEnd]);
+                const dashedLine = new THREE.Line(dashedGeo, dashedMat);
+                dashedLine.computeLineDistances();
+                group.add(dashedLine);
+                
+                // MET arrow
+                const metArrowGeom = new THREE.ConeGeometry(0.06, 0.18, 12);
+                const metArrow = new THREE.Mesh(metArrowGeom, metMat);
+                metArrow.position.copy(metEnd.clone().sub(metDir.clone().multiplyScalar(0.09)));
+                metArrow.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), metDir);
+                group.add(metArrow);
+                
+                // MET label
+                const metDiv = document.createElement('div');
+                metDiv.style.color = '#ff6b6b';
+                metDiv.style.fontWeight = 'bold';
+                metDiv.style.fontSize = '13px';
+                metDiv.style.textShadow = '0 0 5px rgba(0,0,0,1)';
+                metDiv.style.background = 'rgba(5,11,26,0.85)';
+                metDiv.style.padding = '4px 8px';
+                metDiv.style.borderRadius = '6px';
+                metDiv.textContent = `p_{T}^{miss} = ${met.toFixed(2)} GeV`;
+                const metLabel = new CSS2DObject(metDiv);
+                metLabel.position.copy(metEnd.clone().add(new THREE.Vector3(0, 0.2, 0)));
+                group.add(metLabel);
+            }
+        }
+        
+        // Add Δφ or Δη arcs
+    addDeltaArcs(group, daughterPairs, decayVertices, currentView, roots, origin);
+    }
+
+    // First build coordinate axes (so it exists before centering)
+    buildCoordinateAxes();
+
+    // Calculate center of all particle positions and shift both event and axes to center the view
+    if (allParticlePositions.length > 0) {
+        const center = new THREE.Vector3(0, 0, 0);
+        allParticlePositions.forEach(pos => center.add(pos));
+        center.divideScalar(allParticlePositions.length);
+        // Shift everything by negative of the center
+        group.position.sub(center);
+        // Also shift coordinate axes to follow the event (since it's now built)
+        if (coordinateAxesGroup) {
+            coordinateAxesGroup.position.sub(center);
+        }
+        // Also adjust decay vertices for delta arcs (only for 2D views, since 3D delta is label only)
+        if (currentView !== '3d') {
+            decayVertices.forEach((pos, key) => {
+                pos.sub(center);
+            });
+        }
+    }
 
     currentEventGroup = group;
     scene.add(group);
@@ -474,12 +1050,32 @@ function setEventNumber(num) {
     loadEventByNumber(num);
 }
 
+// Progress UI helpers
+function showProgress() {
+    $('uploadProgress').style.display = 'flex';
+    updateProgress(0);
+}
+
+function hideProgress() {
+    $('uploadProgress').style.display = 'none';
+}
+
+function updateProgress(percent, label = null) {
+    $('progressFill').style.width = `${percent}%`;
+    $('progressText').textContent = `${Math.round(percent)}%`;
+    if (label) {
+        $('progressLabel').textContent = label;
+    }
+}
+
 async function handleFile(file, isBuiltIn = false) {
     $('warningMsg').textContent = '';
     $('fileName').textContent = file.name;
+    showProgress();
 
     const headSize = Math.min(file.size, 8192);
     const headText = await file.slice(0, headSize).text();
+    updateProgress(5);
 
     if (file.name.endsWith('.gz') || file.name.endsWith('.lhe.gz') || file.name.endsWith('.hepmc.gz')) {
         const head = new Uint8Array(await file.slice(0, 2).arrayBuffer());
@@ -489,24 +1085,27 @@ async function handleFile(file, isBuiltIn = false) {
             $('eventControlPanel').hidden = true;
             cleanupEventVisual();
             activeHandler = null;
+            hideProgress();
             return;
         }
     }
 
     const fileType = detectFileType(file, headText);
     if (!fileType) {
-        $('fileInfo').innerHTML = '<span class="status error">Unrecognized file format. Expected .lhe or .hepmc.</span>';
+        $('fileInfo').innerHTML = '<span class="status error">Unrecognized file format. Expected .lhe or HepMC.</span>';
         $('eventControlPanel').hidden = true;
         cleanupEventVisual();
         activeHandler = null;
+        hideProgress();
         return;
     }
 
     activeHandler = fileType === 'hepmc' ? hepmcHandler : lheHandler;
-    const ok = await activeHandler.loadFile(file);
+    const ok = await activeHandler.loadFile(file, updateProgress);
 
     if (!ok) {
         $('eventControlPanel').hidden = true;
+        hideProgress();
         return;
     }
 
@@ -517,6 +1116,7 @@ async function handleFile(file, isBuiltIn = false) {
     $('eventNumberInput').value = 1;
     await loadEventByNumber(1);
 
+    hideProgress();
     if (!isBuiltIn) addUserLoadedSample(file, fileType);
 }
 
@@ -639,12 +1239,14 @@ function showParticleTooltip(p, info, clientX, clientY) {
     const pt = Math.hypot(p.px, p.py);
     const eta = kinematicEta(p);
     const phi = kinematicPhi(p);
+    const theta = calculateTheta(p);
     const etaStr = Number.isFinite(eta) ? eta.toFixed(3) : (eta > 0 ? '+\\infty' : '-\\infty');
 
     renderLatex(tooltipName, info.latex || info.name, true);
     tooltipPid.textContent = `PID ${p.idup}  ·  Q = ${formatCharge(info.charge)}`;
 
     tooltipBody.innerHTML = '';
+    const thetaDeg = theta * (180 / Math.PI);
     const rows = [
         ['|{\\vec p}|', `${pMag.toFixed(3)}\\;\\mathrm{GeV}`],
         ['p_x', `${p.px.toFixed(3)}\\;\\mathrm{GeV}`],
@@ -655,6 +1257,8 @@ function showParticleTooltip(p, info, clientX, clientY) {
         ['m', `${p.m.toFixed(4)}\\;\\mathrm{GeV}`],
         ['\\eta', etaStr],
         ['\\phi', `${phi.toFixed(3)}\\;\\mathrm{rad}`],
+        ['\\theta', `${theta.toFixed(3)}\\;\\mathrm{rad}\\;(${thetaDeg.toFixed(1)}°)`],
+        ['\\cos\\theta', `${Math.cos(theta).toFixed(4)}`],
     ];
     for (const [label, value] of rows) {
         const lbl = document.createElement('span');
@@ -714,6 +1318,20 @@ function showViewer() {
     $('navViewer').classList.add('active');
 }
 
+function setViewButtonState(activeBtnId) {
+    ['view3dBtn', 'viewTransverseBtn', 'viewLongitudinalBtn'].forEach(id => {
+        const btn = $(id);
+        btn.classList.toggle('active', id === activeBtnId);
+    });
+}
+
+function updateVisualization() {
+    buildCoordinateAxes();
+    if (activeHandler?.hasVisual()) {
+        loadEventByNumber(currentEventNumber);
+    }
+}
+
 function initUi() {
     $('navHome').addEventListener('click', e => { e.preventDefault(); showHome(); });
     $('navViewer').addEventListener('click', e => { e.preventDefault(); showViewer(); });
@@ -721,7 +1339,6 @@ function initUi() {
     homeOverlay.addEventListener('click', e => { if (e.target === homeOverlay) showViewer(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') showViewer(); });
 
-    // UI bindings
     $('uploadBtn').addEventListener('click', () => $('eventFileInput').click());
     $('eventFileInput').addEventListener('change', e => {
         const file = e.target.files[0];
@@ -733,6 +1350,35 @@ function initUi() {
     $('eventNumberInput').addEventListener('change', e => setEventNumber(parseInt(e.target.value, 10)));
     $('eventNumberInput').addEventListener('keydown', e => {
         if (e.key === 'Enter') setEventNumber(parseInt(e.target.value, 10));
+    });
+
+    $('view3dBtn').addEventListener('click', () => {
+        setViewButtonState('view3dBtn');
+        setViewCamera('3d');
+    });
+    $('viewTransverseBtn').addEventListener('click', () => {
+        setViewButtonState('viewTransverseBtn');
+        setViewCamera('transverse');
+    });
+    $('viewLongitudinalBtn').addEventListener('click', () => {
+        setViewButtonState('viewLongitudinalBtn');
+        setViewCamera('longitudinal');
+    });
+
+    // Add event listeners for the new checkboxes
+    $('showAxesCheckbox').addEventListener('change', (e) => {
+        showAxes = e.target.checked;
+        updateVisualization();
+    });
+
+    $('showKinematicsCheckbox').addEventListener('change', (e) => {
+        showKinematics = e.target.checked;
+        updateVisualization();
+    });
+    
+    $('showParticleCoordsCheckbox').addEventListener('change', (e) => {
+        showParticleCoords = e.target.checked;
+        updateVisualization();
     });
 }
 
