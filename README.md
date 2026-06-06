@@ -6,8 +6,8 @@
 
 EventViz is a lightweight client-side tool to explore particle-collision events stored
 in Les Houches Event (`.lhe`) or HepMC (`.hepmc`) format. It parses event headers and
-per-particle kinematics from the uploaded file and renders an interactive 3D view of the
-collision (incoming beams, outgoing tracks and decay chains) using Three.js.
+per-particle kinematics from the uploaded file and renders an interactive 3D, transverse,
+and longtidunal view of the collision (incoming beams, outgoing tracks and decay chains) using Three.js.
 
 ## Features
 
