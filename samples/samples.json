@@ -17,4 +17,10 @@
     "type": "hepmc",
     "isBuiltIn": true
   }
+  {
+    "name": "pp_ww_LO_showered",
+    "filename": "pp_ww_LO_showered.lhe",
+    "type": "lhe",
+    "isBuiltIn": true
+  }
 ]
